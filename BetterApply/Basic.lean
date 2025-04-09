@@ -1,8 +1,8 @@
-prelude
 import Lean.Meta.Tactic.LibrarySearch
 import Lean.Meta.Tactic.TryThis
 import Lean.Elab.Tactic.ElabTerm
-
+import Mathlib.RingTheory.Ideal.Defs
+import Mathlib.Data.Real.Basic
 
 
 open Lean Meta LibrarySearch
@@ -62,9 +62,51 @@ def evalApply' : Tactic := fun stx => do
 
 
 
-example : ∀ (a b : Nat), a + b = b + a := by
+example : ∀ (a b : Nat), a + b + 0 = 0 + (b + a) := by
   apply_better
 
 
 example : ∀ (n : Nat), n = n+1 := by
+  apply_better
+
+
+example (x y : ℝ) : Ideal.span {x} = Ideal.span {x^2} := by
+  apply_better
+
+
+-- testing on a few examples from minif2f
+
+theorem amc12a_2015_p10 (x y : ℤ) (h₀ : 0 < y) (h₁ : y < x) (h₂ : x + y + x * y = 80) : x = 26 := by
+  apply_better
+
+theorem amc12a_2008_p8 (x y : ℝ) (h₀ : 0 < x ∧ 0 < y) (h₁ : y ^ 3 = 1)
+  (h₂ : 6 * x ^ 2 = 2 * (6 * y ^ 2)) : x ^ 3 = 2 * Real.sqrt 2 := by
+  apply_better
+
+theorem mathd_algebra_182 (y : ℂ) : 7 * (3 * y + 2) = 21 * y + 14 := by
+  apply_better
+
+theorem aime_1984_p5 (a b : ℝ) (h₀ : Real.logb 8 a + Real.logb 4 (b ^ 2) = 5)
+  (h₁ : Real.logb 8 b + Real.logb 4 (a ^ 2) = 7) : a * b = 512 := by
+  apply_better
+
+theorem mathd_numbertheory_780 (m x : ℤ) (h₀ : 0 ≤ x) (h₁ : 10 ≤ m ∧ m ≤ 99) (h₂ : 6 * x % m = 1)
+  (h₃ : (x - 6 ^ 2) % m = 0) : m = 43 := by
+  apply_better
+
+theorem mathd_algebra_116 (k x : ℝ) (h₀ : x = (13 - Real.sqrt 131) / 4)
+    (h₁ : 2 * x ^ 2 - 13 * x + k = 0) : k = 19 / 4 := by
+  rw [h₀] at h₁
+  rw [eq_comm.mp (add_eq_zero_iff_neg_eq.mp h₁)]
+  norm_num
+  rw [pow_two]
+  apply_better
+
+theorem mathd_numbertheory_13 (u v : ℕ) (S : Set ℕ)
+  (h₀ : ∀ n : ℕ, n ∈ S ↔ 0 < n ∧ 14 * n % 100 = 46) (h₁ : IsLeast S u)
+  (h₂ : IsLeast (S \ {u}) v) : (u + v : ℚ) / 2 = 64 := by
+  apply_better
+
+theorem amc12a_2009_p9 (a b c : ℝ) (f : ℝ → ℝ) (h₀ : ∀ x, f (x + 3) = 3 * x ^ 2 + 7 * x + 4)
+  (h₁ : ∀ x, f x = a * x ^ 2 + b * x + c) : a + b + c = 2 := by
   apply_better
