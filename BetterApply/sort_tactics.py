@@ -30,7 +30,7 @@ def main():
     model = 'nomic-embed-text'
     sorted_tactics, sorted_indices = find_relevant_tactics(tactics, prompt, model)
     for i, tactic in zip(sorted_indices, sorted_tactics):
-        print(f"{i} {tactic}")
+        print(f"{i}")
 
 if __name__ == "__main__":
     main()
