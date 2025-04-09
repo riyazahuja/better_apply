@@ -7,12 +7,13 @@ Embed the tactics and the prompt and sort tactics by their cosine similarity to 
 from sklearn.metrics.pairwise import cosine_similarity
 from typing import List
 import ollama
+import sys
 
 def embed_text(text: str, model) -> List[float]:
     emb = ollama.embeddings(model=model, prompt=text)
     return emb.embedding
 
-def find_relevant_tactics(tactics: List[str], prompt: str, model='nomic-embed-text') -> List[str]:
+def find_relevant_tactics(tactics: List[str], prompt: str, model) -> List[str]:
     """
     Given a list of tactics and a prompt string, find the tactics that are most relevant to the prompt.
     """
@@ -33,17 +34,29 @@ def find_relevant_tactics(tactics: List[str], prompt: str, model='nomic-embed-te
 
     return sorted_tactics, sorted_indices
 
-tactic_list = ['exact fun a b ↦ Nat.add_comm a b', 
-               'exact fun a b ↦ Nat.add_assoc a b', 
-               'exact fun a b ↦ Nat.add_zero a b', 
-               'exact fun a b ↦ Nat.add_succ a b',
-               'rw [Commute.add_left]']
-prompt = 'addition is commutative'
-# model = 'mxbai-embed-large'
-model = 'nomic-embed-text'
-# cosine_similarity([embed_text_ollama(prompt, model=model)], [embed_text_ollama(t, model=model) for t in tactic_list])
+def main():
+    """
+    Usage: `python sort_tactics.py 'comm of add' 'add_assoc' 'mul_comm' 'add_comm'`
+    """
+    if len(sys.argv) < 3:
+        print("Usage: python sort_tactics.py 'prompt' 'tactic1' 'tactic2' ...")
+        sys.exit(1)
+    
+    # Get prompt from the first argument
+    prompt = sys.argv[1]
+    
+    # Get tactics from the rest of the arguments
+    tactics = sys.argv[2:]
+    
+    # Default model
+    model = 'nomic-embed-text'
+    
+    # Find relevant tactics
+    sorted_tactics, sorted_indices = find_relevant_tactics(tactics, prompt, model)
+    
+    # Display results
+    for i, tactic in zip(sorted_indices, sorted_tactics):
+        print(f"{i + 1} {tactic}")
 
-sorted_tactics, sorted_indices = find_relevant_tactics(tactic_list, prompt)
-print("Sorted Tactics:")
-for i, tactic in enumerate(sorted_tactics):
-    print(f"{i + 1}: {tactic}")
+if __name__ == "__main__":
+    main()
