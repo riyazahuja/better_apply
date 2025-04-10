@@ -8,11 +8,10 @@ import Mathlib.Data.Real.Basic
 open Lean Meta LibrarySearch
 open Elab Tactic Term TryThis
 
-syntax (name := apply_better_stx) "apply_better" (" using " (colGt term),+)? : tactic
 
-def sort_suggestions (suggestions :  Array (List MVarId × MetavarContext)) (mvar : MVarId): MetaM (Array MetavarContext) := do
+def sort_suggestions (suggestions :  Array (List MVarId × MetavarContext)) (mvar : MVarId) (prompt : String): MetaM (Array MetavarContext) := do
   -- let mut sugg := []
-  logInfo s!"HELLO"
+  -- logInfo s!"HELLO"
   let sugg : MetaM _:= suggestions.mapM (fun (_, suggestionMCtx) => do
     withMCtx suggestionMCtx do
       let msg := (← instantiateMVars (mkMVar mvar)).headBeta
@@ -32,7 +31,7 @@ def sort_suggestions (suggestions :  Array (List MVarId × MetavarContext)) (mva
   let msgs := (sugg).map (fun (_, msg) => msg)
   let out ← IO.Process.output {
     cmd := "python3"
-    args := #["BetterApply/sort_tactics.py", "hello"] ++ msgs.toList
+    args := #["BetterApply/sort_tactics.py", prompt] ++ msgs.toList
   }
 
   logInfo s!"stdout: {out.stdout}"
@@ -53,7 +52,7 @@ def sort_suggestions (suggestions :  Array (List MVarId × MetavarContext)) (mva
 
   return sorted
 
-def exact_better (ref : Syntax) (required : Option (Array (TSyntax `term))):
+def exact_better (ref : Syntax) (required : Option (Array (TSyntax `term))) (prompt : String) :
     TacticM Unit := do
   let mvar ← getMainGoal
   -- let initialState ← saveState
@@ -73,20 +72,25 @@ def exact_better (ref : Syntax) (required : Option (Array (TSyntax `term))):
       logInfo m!"apply? found suggestion: {ref} {(← instantiateMVars (mkMVar mvar)).headBeta}"
     | some suggestions =>
       reportOutOfHeartbeats `apply? ref
-      let suggestions' ← sort_suggestions suggestions mvar
+      let suggestions' ← sort_suggestions suggestions mvar prompt
       for suggestionMCtx in suggestions' do
         withMCtx suggestionMCtx do
           addExactSuggestion ref (← instantiateMVars (mkMVar mvar)).headBeta (addSubgoalsMsg := true) --(tacticErrorAsInfo := true)
           -- logInfo m!"apply? found suggestion: {ref} {(← instantiateMVars (mkMVar mvar)).headBeta}"
       if suggestions.isEmpty then logError "apply? didn't find any relevant lemmas"
       admitGoal goal
-
+syntax (name := apply_better_stx) "apply_better" (" with " str)? (" using " (colGt term),+)? : tactic
 
 @[tactic apply_better_stx]
 def evalApply' : Tactic := fun stx => do
-  let `(tactic| apply_better $[using $[$required],*]?) := stx
+  let `(tactic| apply_better $[with $str]? $[using $[$required],*]?) := stx
         | throwUnsupportedSyntax
-  exact_better (← getRef) required
+  let prompt := if let some strVal := str then
+    strVal.getString
+  else
+    -- logInfo "didn't find nothing"
+    "didn't find nothing"
+  exact_better (← getRef) required prompt
 
 
 
@@ -94,8 +98,8 @@ def evalApply' : Tactic := fun stx => do
 --   apply_better
 
 
-example : ∀ (n : Nat), n = n+1 := by
-  apply_better
+-- example : ∀ (n : Nat), n = n+1 := by
+--   apply_better
 
 
 -- example (x y : ℝ) : Ideal.span {x} = Ideal.span {x^2} := by
@@ -103,6 +107,7 @@ example : ∀ (n : Nat), n = n+1 := by
 
 
 -- -- testing on a few examples from minif2f
+--zpow_
 
 -- theorem amc12a_2015_p10 (x y : ℤ) (h₀ : 0 < y) (h₁ : y < x) (h₂ : x + y + x * y = 80) : x = 26 := by
 --   apply_better
@@ -111,8 +116,11 @@ example : ∀ (n : Nat), n = n+1 := by
 --   (h₂ : 6 * x ^ 2 = 2 * (6 * y ^ 2)) : x ^ 3 = 2 * Real.sqrt 2 := by
 --   apply_better
 
--- theorem mathd_algebra_182 (y : ℂ) : 7 * (3 * y + 2) = 21 * y + 14 := by
---   apply_better
+
+
+theorem mathd_algebra_182 (y : ℚ) : 7 * (3 * y + 2) = 21 * y + 14 := by
+  apply_better with "mul_eq_of_eq_inv_mul"
+
 
 -- theorem aime_1984_p5 (a b : ℝ) (h₀ : Real.logb 8 a + Real.logb 4 (b ^ 2) = 5)
 --   (h₁ : Real.logb 8 b + Real.logb 4 (a ^ 2) = 7) : a * b = 512 := by

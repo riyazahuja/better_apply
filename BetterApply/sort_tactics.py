@@ -23,6 +23,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Check if Ollama is installed
 try:
     import ollama
+
     ollama.list()
 except Exception:
     print("Error: Ollama is not installed or not running.")
@@ -31,10 +32,11 @@ except Exception:
     sys.exit(1)
 
 # Check if the model exists, if not pull it
-model = 'nomic-embed-text'
+model = "nomic-embed-text:latest"
 try:
     models = ollama.list()
-    if model not in [m['name'] for m in models['models']]:
+    print(models)
+    if model not in [m.model for m in models["models"]]:
         print(f"Model {model} not found in Ollama. Pulling it now...")
         ollama.pull(model)
         print(f"Successfully pulled model {model}")
@@ -42,30 +44,36 @@ except Exception as e:
     print(f"Error checking/pulling model: {e}")
     sys.exit(1)
 
+
 def embed_text(text: str, model: str):
     emb = ollama.embeddings(model=model, prompt=text)
     return emb.embedding
+
 
 def find_relevant_tactics(tactics: list[str], prompt: str, model: str):
     prompt_embedding = embed_text(prompt, model=model)
     tactic_embeddings = [embed_text(tactic, model=model) for tactic in tactics]
     similarities = cosine_similarity([prompt_embedding], tactic_embeddings)[0]
-    sorted_indices = sorted(range(len(similarities)), key=lambda i: similarities[i], reverse=True)
+    sorted_indices = sorted(
+        range(len(similarities)), key=lambda i: similarities[i], reverse=True
+    )
     sorted_tactics = [tactics[i] for i in sorted_indices]
     return sorted_tactics, sorted_indices
 
+
 def main():
     "Usage: `python sort_tactics.py 'comm of add' 'add_assoc' 'mul_comm' 'add_comm'`"
-    
+
     if len(sys.argv) < 3:
         print("Usage: python sort_tactics.py 'prompt' 'tactic1' 'tactic2' ...")
         sys.exit(1)
-    
+
     prompt = sys.argv[1]
     tactics = sys.argv[2:]
     sorted_tactics, sorted_indices = find_relevant_tactics(tactics, prompt, model)
     for i, tactic in zip(sorted_indices, sorted_tactics):
         print(f"{i}")
+
 
 if __name__ == "__main__":
     main()
